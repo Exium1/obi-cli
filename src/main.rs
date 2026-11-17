@@ -1,20 +1,20 @@
 use std::process::{Command, Output};
+
+use crate::commands::write::WriteCommand;
 mod commands;
 
 fn main() {
-  let mut args: Vec<String> = std::env::args().collect();
-  args.remove(0); // don't need bin, just args now
-
+  let full_args: Vec<String> = std::env::args().collect();
+  let args = full_args[1..].to_vec();
   let cmd: &String = &(args[0]);
 
   match cmd.as_str() {
     "write" => {
-      commands::write::execute(args);
-      return ();
+      let write_cmd: WriteCommand = WriteCommand::from_args(&args);
+      write_cmd.execute();
     }
     _ => {
       obsidian(args, false);
-      return ();
     }
   }
 }

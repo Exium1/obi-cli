@@ -1,20 +1,128 @@
-use crate::obsidian;
-use regex::Regex;
 use std::{
-  ops::RangeInclusive,
-  process::{Command, Stdio, exit},
+  io::{Error, IsTerminal, Read, stdin}, process::{Command, Output, Stdio},
 };
 
-struct WriteCommand {
+pub struct WriteCommand {
   name: Option<String>,
   path: Option<String>,
-  content: Option<String>,
+  content: String,
   line: Option<String>,
   anchor: Option<String>,
   open: bool,
   newtab: bool,
 }
 
+impl WriteCommand {
+  fn new(
+    name: Option<String>,
+    path: Option<String>,
+    content_raw: Option<String>,
+    line: Option<String>,
+    anchor: Option<String>,
+    open: bool,
+    newtab: bool,
+  ) -> Self {
+
+    // Get input from stdin if content isn't set
+    let content: String = match content_raw {
+      Some(text) => text,
+      None => {
+
+        let mut stdin = stdin();
+        let mut buffer = String::new();
+
+        if !stdin.is_terminal() {
+          let _ = stdin.read_to_string(&mut buffer);
+        }
+
+        buffer
+      }
+    };
+
+    Self {
+      name,
+      path,
+      content,
+      line,
+      anchor,
+      open,
+      newtab,
+    }
+  }
+
+  pub fn from_args(
+    args: &Vec<String>
+  ) -> Self {
+
+    let mut name: Option<String> = None;
+    let mut path: Option<String> = None;
+    let mut content: Option<String> = None;
+    let mut line: Option<String> = None;
+    let mut anchor: Option<String> = None;
+    let mut open = false;
+    let mut newtab = false;
+
+    // Extract all args into command
+    for arg in args {
+      if arg.contains("=") {
+        let split: Option<(&str, &str)> = arg.split_once("=");
+
+        match split {
+          Some((p, s)) => match p {
+            "name" => name = Some(String::from(s)),
+            "path" => path = Some(String::from(s)),
+            "content" => content = Some(String::from(s)),
+            "line" => line = Some(String::from(s)),
+            "anchor" => anchor = Some(String::from(s)),
+            _ => continue,
+          },
+          None => continue,
+        }
+      } else if arg.eq("newtab") {
+        newtab = true;
+      } else if arg.eq("open") {
+        open = true;
+      }
+    }
+
+    WriteCommand::new(name, path, content, line, anchor, open, newtab)
+  }
+
+  pub fn execute(self) {
+    // Read from obsidian
+    let mut args_read = vec!["read".to_string()];
+
+    match self.path {
+      Some(path) => args_read.push(format!("path={}", path)),
+      None => (),
+    }
+    
+    match self.name {
+      Some(name) => args_read.push(format!("name={}", name)),
+      None => (),
+    }
+
+    let read_output = obsidian_cli(args_read).expect("Failed to get obsidian read output");
+    // let read_text = String::from_utf8_lossy(&(read_output.stdout));
+    // let target_line = line.map(|l| l.saturating_sub(1)); // Convert 1-based to 0-based index
+
+    println!("output: {:?}", String::from_utf8(read_output.stdout));
+
+    // Modify lines
+    println!("content: {}", self.content);
+
+    // Write to obsidian
+  }
+}
+
+fn obsidian_cli(args: Vec<String>) -> Result<Output, Error> {
+  Command::new("obsidian")
+    .args(args)
+    .stdout(Stdio::piped())
+    .output()
+}
+
+/* 
 pub fn execute(args: Vec<String>) {
   println!("Write command...");
 
@@ -195,3 +303,20 @@ fn parse_line_range(line: Option<String>) -> Option<RangeInclusive<usize>> {
     Some(single..=single) // A single line is just a range from N to N
   }
 }
+
+fn obsidian_read(args: Vec<String>) -> std::io::Result<String> {
+  let output = Command::new("obsidian").args(args).output()?;
+
+  let text = String::from_utf8_lossy(&output.stdout).to_string();
+  Ok(text)
+}
+
+fn obsidian_read_stdout(args: Vec<String>) -> Result<Child, Error> {
+  let read_stdout = Command::new("obsidian")
+    .args(args)
+    .stdout(Stdio::piped())
+    .spawn();
+
+  return read_stdout;
+}
+*/
