@@ -1,8 +1,9 @@
 use std::{
-  io::{Error, IsTerminal, Read, stdin}, process::{Command, Output, Stdio},
+  io::{Error, IsTerminal, Read, stdin},
+  process::{Command, Output, Stdio},
 };
 
-pub struct WriteCommand {
+struct WriteCommand {
   name: Option<String>,
   path: Option<String>,
   content: String,
@@ -11,6 +12,10 @@ pub struct WriteCommand {
   open: bool,
   newtab: bool,
 }
+
+// pub trait ArgParser {
+//   fn ()
+// }
 
 impl WriteCommand {
   fn new(
@@ -22,12 +27,10 @@ impl WriteCommand {
     open: bool,
     newtab: bool,
   ) -> Self {
-
     // Get input from stdin if content isn't set
     let content: String = match content_raw {
       Some(text) => text,
       None => {
-
         let mut stdin = stdin();
         let mut buffer = String::new();
 
@@ -50,10 +53,7 @@ impl WriteCommand {
     }
   }
 
-  pub fn from_args(
-    args: &Vec<String>
-  ) -> Self {
-
+  pub fn run_from_args(args: &Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
     let mut name: Option<String> = None;
     let mut path: Option<String> = None;
     let mut content: Option<String> = None;
@@ -61,6 +61,8 @@ impl WriteCommand {
     let mut anchor: Option<String> = None;
     let mut open = false;
     let mut newtab = false;
+
+    println!("{:?}", &args);
 
     // Extract all args into command
     for arg in args {
@@ -85,10 +87,13 @@ impl WriteCommand {
       }
     }
 
-    WriteCommand::new(name, path, content, line, anchor, open, newtab)
+    let write_command = WriteCommand::new(name, path, content, line, anchor, open, newtab);
+    write_command.execute()?;
+
+    Ok(())
   }
 
-  pub fn execute(self) {
+  pub fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
     // Read from obsidian
     let mut args_read = vec!["read".to_string()];
 
@@ -96,7 +101,7 @@ impl WriteCommand {
       Some(path) => args_read.push(format!("path={}", path)),
       None => (),
     }
-    
+
     match self.name {
       Some(name) => args_read.push(format!("name={}", name)),
       None => (),
@@ -111,7 +116,11 @@ impl WriteCommand {
     // Modify lines
     println!("content: {}", self.content);
 
+    // Fake failure
+    Err("Fake failure".into())
+
     // Write to obsidian
+    // Ok(())
   }
 }
 
@@ -122,7 +131,7 @@ fn obsidian_cli(args: Vec<String>) -> Result<Output, Error> {
     .output()
 }
 
-/* 
+/*
 pub fn execute(args: Vec<String>) {
   println!("Write command...");
 

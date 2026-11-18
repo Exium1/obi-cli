@@ -1,35 +1,75 @@
-use std::process::{Command, Output};
+use clap::{CommandFactory, Parser, Subcommand};
+use std::{
+  io::{Error, ErrorKind},
+  process::{Command, Output},
+};
 
-use crate::commands::write::WriteCommand;
+// use crate::commands::write::WriteCommand;
+use crate::commands::write_command::WriteCommand;
 mod commands;
 
-fn main() {
-  let full_args: Vec<String> = std::env::args().collect();
-  let args = full_args[1..].to_vec();
-  let cmd: &String = &(args[0]);
-
-  match cmd.as_str() {
-    "write" => {
-      let write_cmd: WriteCommand = WriteCommand::from_args(&args);
-      write_cmd.execute();
-    }
-    _ => {
-      obsidian(args, false);
-    }
-  }
+#[derive(Parser, Debug)]
+#[command(
+  // disable_help_flag = true,
+  // disable_help_subcommand = true,
+  // disable_version_flag = true
+)]
+struct Cli {
+  #[command(subcommand)]
+  command: Commands,
 }
 
-fn obsidian(args: Vec<String>, output: bool) -> Option<Output> {
-  println!("obsidian-cli...");
-  println!("{:?}", args);
+#[derive(Subcommand, Debug)]
+enum Commands {
+  Write(WriteCommand),
 
-  let mut binding = Command::new("obsidian");
-  let cmd = binding.args(args);
+  #[command(external_subcommand)]
+  External(Vec<String>),
+}
 
-  if output {
-    return Some(cmd.output().expect("obsidian cli should execute"));
-  } else {
-    cmd.spawn().expect("obsidian cli should execute");
-    return None;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+  let raw_args: Vec<String> = std::env::args().collect();
+  let normalized = normalize_args(raw_args.clone().to_owned());
+  println!("{:?}", &normalized);
+  let cli = Cli::parse_from(normalized);
+
+  match cli.command {
+    Commands::Write(cmd) => {
+      println!("Running custom write: {:#?}", cmd);
+    }
+    _ => {
+      println!("> obsidian");
+      Command::new("obsidian")
+        .args(raw_args[1..].to_vec())
+        .status()
+        .expect("Failed to execute underlying CLI");
+    }
   }
+
+  Ok(())
+}
+
+fn normalize_args(raw_args: Vec<String>) -> Vec<String> {
+  let subcmd = raw_args.get(1).map(|s| s.as_str()).unwrap_or("");
+
+  // Ask clap itself if `subcmd` is one of your defined enum variants
+  let is_custom_cmd = Cli::command()
+    .get_subcommands()
+    .any(|c| c.get_name() == subcmd);
+
+  if is_custom_cmd {
+    return raw_args;
+  }
+
+  raw_args
+    .into_iter()
+    .enumerate()
+    .map(|(i, arg)| {
+      if i <= 1 || arg.starts_with('-') {
+        arg
+      } else {
+        format!("--{}", arg)
+      }
+    })
+    .collect()
 }
