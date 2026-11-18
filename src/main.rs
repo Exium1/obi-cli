@@ -1,18 +1,24 @@
-use clap::{CommandFactory, Parser, Subcommand};
-use std::{
-  io::{Error, ErrorKind},
-  process::{Command, Output},
-};
-
-// use crate::commands::write::WriteCommand;
-use crate::commands::write_command::WriteCommand;
 mod commands;
+mod errors;
+mod util;
+
+use crate::{
+  commands::{obsidian::obsidian, write::WriteCommand},
+  errors::ObiError,
+};
+use clap::{Parser, Subcommand};
+use std::{
+  error::Error,
+  io::{self, Write, stderr, stdout},
+  process::{Command, ExitCode, Output},
+};
 
 #[derive(Parser, Debug)]
 #[command(
   // disable_help_flag = true,
   // disable_help_subcommand = true,
-  // disable_version_flag = true
+  // disable_version_flag = true,
+  allow_external_subcommands = true
 )]
 struct Cli {
   #[command(subcommand)]
@@ -27,49 +33,37 @@ enum Commands {
   External(Vec<String>),
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> std::process::ExitCode {
   let raw_args: Vec<String> = std::env::args().collect();
-  let normalized = normalize_args(raw_args.clone().to_owned());
-  println!("{:?}", &normalized);
-  let cli = Cli::parse_from(normalized);
+  let cli: Cli = Cli::parse_from(&raw_args);
 
   match cli.command {
     Commands::Write(cmd) => {
-      println!("Running custom write: {:#?}", cmd);
-    }
-    _ => {
-      println!("> obsidian");
-      Command::new("obsidian")
-        .args(raw_args[1..].to_vec())
-        .status()
-        .expect("Failed to execute underlying CLI");
-    }
-  }
-
-  Ok(())
-}
-
-fn normalize_args(raw_args: Vec<String>) -> Vec<String> {
-  let subcmd = raw_args.get(1).map(|s| s.as_str()).unwrap_or("");
-
-  // Ask clap itself if `subcmd` is one of your defined enum variants
-  let is_custom_cmd = Cli::command()
-    .get_subcommands()
-    .any(|c| c.get_name() == subcmd);
-
-  if is_custom_cmd {
-    return raw_args;
-  }
-
-  raw_args
-    .into_iter()
-    .enumerate()
-    .map(|(i, arg)| {
-      if i <= 1 || arg.starts_with('-') {
-        arg
-      } else {
-        format!("--{}", arg)
+      println!("> obi");
+      match cmd.execute() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+          eprintln!("error: {e}");
+          ExitCode::from(e.exit_code())
+        }
       }
-    })
-    .collect()
+    }
+    Commands::External(args) => match obsidian(args, false) {
+      Ok(_) => ExitCode::SUCCESS,
+      Err(e) => {
+        eprintln!("error: {e}");
+        ExitCode::from(e.exit_code())
+      }
+    },
+  }
+
+  // println!("TEST A:");
+  // let out = Command::new("obsidian").arg("read").output().unwrap();
+  // println!("========================\n{}\n========================", String::from_utf8_lossy_owned(out.stdout.clone()));
+  // println!("{:?}", &out.stdout);
+
+  // println!("TEST B:");
+  // let outB = Command::new("obsidian.com").arg("read").output().unwrap();
+  // println!("========================\n{}\n========================", String::from_utf8_lossy_owned(outB.stdout.clone()));
+  // println!("{:?}", &outB.stdout);
 }
