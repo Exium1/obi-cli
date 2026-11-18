@@ -1,5 +1,5 @@
 use std::{
-  io::{self, Write, stderr, stdout},
+  io::{Write, stderr, stdout},
   process::{Command, Output},
 };
 
@@ -50,8 +50,8 @@ fn to_obsidian_args(args: Vec<String>) -> Vec<String> {
 
 /// Runs the Obsidian CLI and always captures its output.
 /// When `hide_output` is false, the captured output is also echoed to the terminal.
-pub fn obsidian(args: Vec<String>, hide_output: bool) -> Result<Output, ObiError> {
-  println!("> obsidian (hide_output: {})", hide_output);
+pub fn obsidian(args: Vec<String>, show_output: bool) -> Result<Output, ObiError> {
+  println!("> obsidian (show_output: {})", show_output);
 
   let output = match Command::new(OBSIDIAN_BIN)
     .args(to_obsidian_args(args))
@@ -68,9 +68,9 @@ pub fn obsidian(args: Vec<String>, hide_output: bool) -> Result<Output, ObiError
     });
   }
 
-  if !hide_output {
-    stdout().write_all(&output.stdout);
-    stderr().write_all(&output.stderr);
+  if show_output {
+    let _ = stdout().write_all(&output.stdout);
+    let _ = stderr().write_all(&output.stderr);
   }
 
   Ok(output)
@@ -86,6 +86,6 @@ pub fn obsidian_read(name: Option<String>, path: Option<String>) -> Result<Strin
     args.push(format!("path={path}"));
   }
 
-  let output = obsidian(args, true)?;
+  let output = obsidian(args, false)?;
   Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }

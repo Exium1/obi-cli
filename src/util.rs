@@ -6,7 +6,7 @@ pub fn read_stdin_content() -> Result<String, ObiError> {
   let mut buf = String::new();
 
   match stdin().read_to_string(&mut buf) {
-    Ok(u) => (),
+    Ok(_) => (),
     Err(e) => return Err(ObiError::Stdin(e)),
   }
 

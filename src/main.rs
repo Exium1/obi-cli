@@ -4,13 +4,10 @@ mod util;
 
 use crate::{
   commands::{obsidian::obsidian, write::WriteCommand},
-  errors::ObiError,
 };
 use clap::{Parser, Subcommand};
 use std::{
-  error::Error,
-  io::{self, Write, stderr, stdout},
-  process::{Command, ExitCode, Output},
+  process::{ExitCode},
 };
 
 #[derive(Parser, Debug)]
@@ -48,7 +45,7 @@ fn main() -> std::process::ExitCode {
         }
       }
     }
-    Commands::External(args) => match obsidian(args, false) {
+    Commands::External(args) => match obsidian(args, true) {
       Ok(_) => ExitCode::SUCCESS,
       Err(e) => {
         eprintln!("error: {e}");
