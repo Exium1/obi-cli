@@ -2,13 +2,9 @@ mod commands;
 mod errors;
 mod util;
 
-use crate::{
-  commands::{obsidian::obsidian, write::WriteCommand},
-};
+use crate::commands::{obsidian::obsidian, write::WriteCommand};
 use clap::{Parser, Subcommand};
-use std::{
-  process::{ExitCode},
-};
+use std::process::ExitCode;
 
 #[derive(Parser, Debug)]
 #[command(

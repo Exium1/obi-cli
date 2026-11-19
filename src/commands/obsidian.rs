@@ -3,7 +3,7 @@ use std::{
   process::{Command, Output},
 };
 
-use crate::errors::ObiError;
+use crate::errors::ObiError::{self};
 
 #[cfg(windows)]
 const OBSIDIAN_BIN: &str = "obsidian.com";
@@ -76,16 +76,118 @@ pub fn obsidian(args: Vec<String>, show_output: bool) -> Result<Output, ObiError
   Ok(output)
 }
 
-pub fn obsidian_read(name: Option<String>, path: Option<String>) -> Result<String, ObiError> {
+pub fn obsidian_read(name: Option<&String>, path: Option<&String>) -> Result<String, ObiError> {
   let mut args = vec!["read".to_owned()];
 
-  if let Some(name) = name {
-    args.push(format!("name={name}"));
-  }
   if let Some(path) = path {
     args.push(format!("path={path}"));
   }
 
+  if let Some(name) = name {
+    args.push(format!("name={name}"));
+  }
+
   let output = obsidian(args, false)?;
+  let text = String::from_utf8_lossy(&output.stdout);
+  let text = text
+    .strip_suffix("\r\n")
+    .or_else(|| text.strip_suffix('\n'))
+    .unwrap_or(&text);
+
+  if text.starts_with("Error: File \"") {
+    return Err(ObiError::ObsidianMissingFile(match path {
+      Some(path) => path.into(),
+      None => "".into(),
+    }));
+  }
+
+  Ok(text.to_owned())
+}
+
+pub fn obsidian_create(
+  path: &String,
+  name: &Option<String>,
+  content: &String,
+  open: bool,
+  newtab: bool,
+) -> Result<String, ObiError> {
+  let mut args = vec![
+    "create".to_owned(),
+    format!("path={path}"),
+    format!("content={content}"),
+    "overwrite".to_owned(),
+  ];
+
+  if let Some(name) = name {
+    args.push(format!("name={name}"));
+  }
+
+  if open {
+    args.push(format!("open"));
+  }
+
+  if newtab {
+    args.push(format!("newtab"));
+  }
+
+  let output = obsidian(args, true)?;
   Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+#[derive(Debug)]
+pub struct NoteMeta {
+  pub path: String,
+  pub name: String,
+  pub extension: String,
+  pub size: u64,
+  pub created: u64,
+  pub modified: u64,
+}
+
+fn parse_obsidian(output: &str) -> Result<NoteMeta, ObiError> {
+  let mut path = None;
+  let mut name = None;
+  let mut extension = None;
+  let mut size = None;
+  let mut created = None;
+  let mut modified = None;
+
+  if output.starts_with("Error: No active file.") {
+    return Err(ObiError::ObsidianNoActiveFile());
+  }
+
+  for line in output.lines() {
+    let Some((key, val)) = line.trim().split_once(char::is_whitespace) else {
+      continue;
+    };
+    let val = val.trim_start();
+
+    match key {
+      "path" => path = Some(val.to_owned()),
+      "name" => name = Some(val.to_owned()),
+      "extension" => extension = Some(val.to_owned()),
+      "size" => size = val.parse().ok(),
+      "created" => created = val.parse().ok(),
+      "modified" => modified = val.parse().ok(),
+      _ => {}
+    }
+  }
+
+  let err = || ObiError::ObsidianMismatch("missing or invalid field".into());
+
+  Ok(NoteMeta {
+    path: path.ok_or_else(err)?,
+    name: name.ok_or_else(err)?,
+    extension: extension.ok_or_else(err)?,
+    size: size.ok_or_else(err)?,
+    created: created.ok_or_else(err)?,
+    modified: modified.ok_or_else(err)?,
+  })
+}
+
+pub fn obsidian_file() -> Result<NoteMeta, ObiError> {
+  let args = vec!["file".to_owned()];
+  let output = obsidian(args, false)?;
+
+  parse_obsidian(&String::from_utf8_lossy(&output.stdout))
 }

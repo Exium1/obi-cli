@@ -29,6 +29,15 @@ pub enum ObiError {
 
   #[error("obsidian CLI failed ({status}): {message}")]
   ObsidianFailed { status: ExitStatus, message: String },
+
+  #[error("obsidian CLI's output wasn't expected: {0:?}")]
+  ObsidianMismatch(String),
+
+  #[error("could not find the file {0:?}")]
+  ObsidianMissingFile(String),
+
+  #[error("no active file was found; use path or name")]
+  ObsidianNoActiveFile(),
 }
 
 impl ObiError {
@@ -40,7 +49,11 @@ impl ObiError {
       | Self::AnchorNotFound(_)
       | Self::AnchorAmbiguous { .. }
       | Self::Stdin(_) => 2,
-      Self::ObsidianLaunch(_) | Self::ObsidianFailed { .. } => 3,
+      Self::ObsidianLaunch(_)
+      | Self::ObsidianFailed { .. }
+      | Self::ObsidianMismatch(_)
+      | Self::ObsidianMissingFile(_)
+      | Self::ObsidianNoActiveFile() => 3,
     }
   }
 }
