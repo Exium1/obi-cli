@@ -10,7 +10,6 @@ use similar::{TextDiff};
 
 #[derive(Parser, Debug)]
 #[command(
-  disable_help_flag = true,
   group(
     ArgGroup::new("position")
       .required(true)
@@ -23,13 +22,15 @@ use similar::{TextDiff};
   ),
   
 )]
+#[command(about = "Write a note")]
 pub struct WriteCommand {
-  #[arg(long)]
+  #[arg(short, long)]
   name: Option<String>,
 
-  #[arg(long)]
+  #[arg(short, long)]
   path: Option<String>,
 
+  /// "-" means read from stdin
   #[arg(long)]
   content: String, // "-" means read from stdin
 
@@ -45,7 +46,7 @@ pub struct WriteCommand {
   #[arg(long)]
   newtab: bool,
 
-  #[arg(long)]
+  #[arg(long = "dry-run")]
   dryrun: bool,
 }
 
