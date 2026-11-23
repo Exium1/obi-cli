@@ -114,15 +114,16 @@ impl Runnable for ReadCommand {
     // }
     
     if let Some(f) = self.format {
-      // Get some additional info 
+      // Get some additional info for formatting
       let target_path = get_target_path(self.note.path)?;
       let hash = hash_content(&raw_output);
       let read_output = SuccessReadOutput::new(
         "ok".to_string(),
         target_path,
         hash,
-        output,
-        raw_output.lines().count(),
+        output.clone(),
+        output.lines().count(),
+        Some(raw_output.lines().count()),
         None,
         None
       );
@@ -133,7 +134,11 @@ impl Runnable for ReadCommand {
         println!("Unable to format the output.")
       }
     } else {
-      println!("{:}", &output);
+      if self.numbered {
+        println!("{:}", add_line_numbers(&output))
+      } else {
+        println!("{:}", &output);
+      }
     }
 
     Ok(())
@@ -203,7 +208,7 @@ pub fn add_line_numbers(input: &str) -> String {
   input
     .lines()
     .enumerate()
-    .map(|(i, line)| format!("{}: {}", i + 1, line))
+    .map(|(i, line)| format!("{:>2}: {}", i + 1, line))
     .collect::<Vec<_>>()
     .join("\n")
 }

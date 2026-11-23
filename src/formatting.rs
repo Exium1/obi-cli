@@ -28,6 +28,7 @@ pub struct SuccessReadOutput {
   hash: String,
   content: String,
   lines: usize,
+  total_lines: Option<usize>,
   range: Option<RangeInclusive<usize>>,
   outline: Option<OutlineOutput>
 }
