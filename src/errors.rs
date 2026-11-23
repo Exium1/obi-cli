@@ -23,6 +23,15 @@ pub enum ObiError {
   #[error("failed to read content from stdin: {0}")]
   Stdin(#[source] io::Error),
 
+  #[error("json input from stdin could not parse. use `{{\"old\": \"...\", \"new\": \"...\"}}`")]
+  JSONInputInvalid(),
+
+  #[error("content is empty; use `--allow-empty` if this intentional")]
+  ContentIsEmpty(),
+
+  #[error("content hash was different from expected; current note has hash: {0:?}")]
+  ContentHashUnexpected(String),
+
   // Obsidian CLI problems (environment or the other tool)
   #[error("could not launch the obsidian CLI (is Obsidian installed and running?): {0}")]
   ObsidianLaunch(#[source] io::Error),
@@ -48,7 +57,10 @@ impl ObiError {
       | Self::LineOutOfRange { .. }
       | Self::AnchorNotFound(_)
       | Self::AnchorAmbiguous { .. }
-      | Self::Stdin(_) => 2,
+      | Self::Stdin(_)
+      | Self::ContentIsEmpty()
+      | Self::ContentHashUnexpected(_)
+      | Self::JSONInputInvalid() => 2,
       Self::ObsidianLaunch(_)
       | Self::ObsidianFailed { .. }
       | Self::ObsidianMismatch(_)

@@ -1,6 +1,7 @@
 use std::io::{Read, stdin};
 use std::ops::RangeInclusive;
-
+use xxhash_rust::xxh3::xxh3_128;
+use crate::commands::obsidian::obsidian_file;
 use crate::errors::ObiError;
 
 pub fn read_stdin_content() -> Result<String, ObiError> {
@@ -27,8 +28,7 @@ pub fn read_stdin_content() -> Result<String, ObiError> {
   Ok(buf)
 }
 
-pub fn parse_line_range(line: Option<String>) -> Option<RangeInclusive<usize>> {
-  let l: String = line?; // Returns None if line is None
+pub fn parse_line_range(l: &String) -> Option<RangeInclusive<usize>> {
 
   // Split on '-' (or ',' if you want standard sed syntax)
   if let Some((start_str, end_str)) = l.split_once('-') {
@@ -39,4 +39,16 @@ pub fn parse_line_range(line: Option<String>) -> Option<RangeInclusive<usize>> {
     let single = l.trim().parse::<usize>().ok()?.saturating_sub(1);
     Some(single..=single) // A single line is just a range from N to N
   }
+}
+
+pub fn hash_content(text: &String) -> String {
+  let hash = xxh3_128(text.as_bytes());
+  format!("{:032x}", hash)
+}
+
+pub fn get_target_path(path: Option<String>) -> Result<String, ObiError> {
+ match path {
+    Some(p) => Ok(p),
+    None => Ok(obsidian_file()?.path)
+ }
 }

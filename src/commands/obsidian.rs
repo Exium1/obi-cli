@@ -3,6 +3,8 @@ use std::{
   process::{Command, Output},
 };
 
+use log::{debug, info};
+
 use crate::errors::ObiError::{self};
 
 #[cfg(windows)]
@@ -15,7 +17,7 @@ const OBSIDIAN_BIN: &str = "obsidian";
  * Ex: `--key=val` / `--key val` / `--flag` into `key=val` / `flag`
  */
 fn to_obsidian_args(args: Vec<String>) -> Vec<String> {
-  println!("to_obsidian_args: {:?}", args);
+  debug!("to_obsidian_args: {:?}", args);
 
   let mut out = Vec::new();
   let mut iter = args.iter().peekable();
@@ -43,7 +45,7 @@ fn to_obsidian_args(args: Vec<String>) -> Vec<String> {
     }
   }
 
-  println!("formatted: {:?}", out);
+  debug!("formatted: {:?}", out);
 
   out
 }
@@ -51,7 +53,7 @@ fn to_obsidian_args(args: Vec<String>) -> Vec<String> {
 /// Runs the Obsidian CLI and always captures its output.
 /// When `hide_output` is false, the captured output is also echoed to the terminal.
 pub fn obsidian(args: Vec<String>, show_output: bool) -> Result<Output, ObiError> {
-  println!("> obsidian (show_output: {})", show_output);
+  info!("> obsidian (show_output: {})", show_output);
 
   let output = match Command::new(OBSIDIAN_BIN)
     .args(to_obsidian_args(args))

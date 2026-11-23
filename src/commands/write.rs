@@ -1,9 +1,7 @@
 use std::ops::RangeInclusive;
 
 use crate::{
-  commands::obsidian::{obsidian_create, obsidian_file, obsidian_read},
-  errors::ObiError,
-  util::{parse_line_range, read_stdin_content},
+  Runnable, commands::obsidian::{obsidian_create, obsidian_file, obsidian_read}, errors::ObiError, util::{parse_line_range, read_stdin_content},
 };
 use clap::{ArgGroup, Parser};
 use similar::{TextDiff};
@@ -48,6 +46,12 @@ pub struct WriteCommand {
 
   #[arg(long = "dry-run")]
   dryrun: bool,
+}
+
+impl Runnable for WriteCommand {
+  fn run(self) -> Result<(), ObiError> {
+    Ok(())
+  }
 }
 
 impl WriteCommand {
